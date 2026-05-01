@@ -20,8 +20,8 @@ roomApi.interceptors.request.use(
   }
 );
 
-export const createRoom = async (language: string = 'javascript') => {
-  const response = await roomApi.post('/create', { language });
+export const createRoom = async (name: string) => {
+  const response = await roomApi.post('/create', { name });
   return response.data;
 };
 

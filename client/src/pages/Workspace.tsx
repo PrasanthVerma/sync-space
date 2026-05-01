@@ -3,16 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import EditorWorkspace from '../components/EditorWorkspace';
 import TerminalOutput from '../components/TerminalOutput';
 import UserSidebar from '../components/UserSidebar';
+import FileExplorer from '../components/FileExplorer';
 import { useStore } from '../store/useStore';
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import { logout as logoutApi } from '../services/auth';
 import { Code2, Settings2, Users, LogOut } from 'lucide-react';
 
 const Workspace: React.FC = () => {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { roomId, fileId } = useParams<{ roomId: string, fileId: string }>();
   const navigate = useNavigate();
-  const [roomID,setRoomID] = useState(roomId);
+  const [selectedFileId, setSelectedFileId] = useState<string | undefined>(fileId);
   const { language, setLanguage, setToken, setAuthUser } = useStore();
+
+  useEffect(() => {
+    if (selectedFileId && selectedFileId !== fileId) {
+      navigate(`/api/rooms/${roomId}/files/${selectedFileId}`, { replace: true });
+    }
+  }, [selectedFileId, roomId, navigate, fileId]);
 
   const handleLogout = async () => {
     try {
@@ -70,12 +77,19 @@ const Workspace: React.FC = () => {
 
       {/* Main Workspace */}
       <main className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <UserSidebar />
+        {/* Sidebar Group */}
+        <div className="flex h-full shrink-0">
+          <FileExplorer 
+            roomId={roomId} 
+            onFileSelect={(id) => setSelectedFileId(id)} 
+            selectedFileId={selectedFileId} 
+          />
+          <UserSidebar />
+        </div>
         
         {/* Editor Pane */}
         <div className="flex-1 h-full p-4 relative">
-          <EditorWorkspace roomId={roomId} />
+          <EditorWorkspace roomId={roomId} fileId={selectedFileId} />
         </div>
         
         {/* Output/Terminal Pane */}

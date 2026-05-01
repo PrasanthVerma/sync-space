@@ -37,6 +37,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/api/rooms/:roomId/files/:fileId" 
+          element={
+            <ProtectedRoute>
+              <Workspace />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </Router>
   );

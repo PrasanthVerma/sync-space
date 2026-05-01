@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redis');
-const User = require('../models/User');
+const User = require('../models/user.model');
 
 const protect = async (req, res, next) => {
     let token;
@@ -30,7 +30,7 @@ const protect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
 
         // Attach user to req
-        req.user = await User.findById(decoded.id).select('-password');
+        req.user = await User.findById(decoded.id).select('-passwordHash');
 
         if (!req.user) {
             console.warn('[Auth] Rejected: User not found for id', decoded.id);

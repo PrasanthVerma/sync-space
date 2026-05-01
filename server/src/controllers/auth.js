@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redis');
@@ -11,24 +11,24 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { username, email, password } = req.body;
 
-        if (!name || !email || !password) {
+        if (!username || !email || !password) {
             return res.status(400).json({ success: false, error: 'Please provide all fields' });
         }
 
-        const userExists = await User.findOne({ email });
+        const userExists = await User.findOne({ $or: [{ email }, { username }] });
         if (userExists) {
-            return res.status(400).json({ success: false, error: 'User already exists' });
+            return res.status(400).json({ success: false, error: 'User with this email or username already exists' });
         }
 
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const passwordHash = await bcrypt.hash(password, salt);
 
         const user = await User.create({
-            name,
+            username,
             email,
-            password: hashedPassword
+            passwordHash
         });
 
         const token = generateToken(user._id);
@@ -37,9 +37,10 @@ const registerUser = async (req, res) => {
             success: true,
             data: { 
                 _id: user._id, 
-                name: user.name, 
+                username: user.username, 
                 email: user.email 
             },
+            token
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -54,21 +55,43 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Please provide email and password' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select('+password');
         if (!user) {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        // Handle legacy users who might have 'password' instead of 'passwordHash'
+        const hash = user.passwordHash || user.password;
+        if (!hash) {
+            return res.status(401).json({ success: false, error: 'Account needs migration or password reset' });
+        }
+
+        const isMatch = await bcrypt.compare(password, hash);
         if (!isMatch) {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
+
+        // Auto-migrate legacy users
+        let needsSave = false;
+        if (!user.passwordHash && user.password) {
+            user.passwordHash = user.password;
+            user.password = undefined;
+            needsSave = true;
+        }
+
+        if (!user.username) {
+            user.username = user.email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+            needsSave = true;
+        }
+
+        user.lastLogin = Date.now();
+        await user.save();
 
         const token = generateToken(user._id);
 
         res.status(200).json({
             success: true,
-            data: { _id: user._id, name: user.name, email: user.email },
+            data: { _id: user._id, username: user.username, email: user.email },
             token
         });
     } catch (error) {

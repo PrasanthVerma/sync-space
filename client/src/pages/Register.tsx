@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { register as registerApi } from '../services/auth';
 
 const Register: React.FC = () => {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,7 +17,7 @@ const Register: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const data = await registerApi({ name, email, password });
+      const data = await registerApi({ username, email, password });
       if (data.success) {
         setToken(data.token);
         setAuthUser(data.data);
@@ -37,12 +37,12 @@ const Register: React.FC = () => {
         {error && <div className="bg-red-500/10 text-red-500 p-3 rounded mb-4 text-sm font-medium border border-red-500/20">{error}</div>}
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
           <div>
-            <label className="text-sm text-gray-400 mb-1 block">Full Name</label>
+            <label className="text-sm text-gray-400 mb-1 block">Username</label>
             <input 
               type="text" 
               required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-gray-800 text-sm text-gray-200 px-4 py-3 rounded-lg border border-gray-700 outline-none focus:border-blue-500 transition-colors"
             />
           </div>

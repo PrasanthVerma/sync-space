@@ -24,16 +24,42 @@ import {
   getUserRooms, 
   createRoom, 
   getRoomDetails, 
-  addFileToRoom 
+  addFileToRoom,
+  getRoomFiles
 } from '../services/room';
+
+interface FileItem {
+  _id: string;
+  name: string;
+  type: 'file' | 'folder';
+  parentId: string | null;
+  path: string;
+  meta: {
+    language: string;
+    size: number;
+  };
+}
 
 interface Room {
   _id: string;
-  roomId: string;
-  language: string;
-  createdBy: any;
-  participants: any[];
-  files: any[];
+  name: string;
+  ownerId: {
+    _id: string;
+    username: string;
+    email: string;
+    avatar?: string;
+  };
+  isPublic: boolean;
+  rootFolderId: string;
+  participants: {
+    userId: string;
+    username: string;
+    email: string;
+    avatar?: string;
+    role: string;
+  }[];
+  files: FileItem[];
+  userRole: string;
   createdAt: string;
 }
 
@@ -43,10 +69,10 @@ const Dashboard: React.FC = () => {
   
   // State
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [showNewFileModal, setShowNewFileModal] = useState(false);
   const [modalType, setModalType] = useState<'file' | 'folder'>('file');
@@ -85,12 +111,13 @@ const Dashboard: React.FC = () => {
   const handleCreateRoom = async () => {
     setIsCreatingRoom(true);
     try {
-      const data = await createRoom('javascript');
+      const roomName = `Project-${Math.floor(Math.random() * 1000)}`;
+      const data = await createRoom(roomName);
       if (data.success) {
         await fetchRooms();
         // Automatically select the new room
         const newRoom = data.data;
-        handleSelectRoom(newRoom.roomId);
+        handleSelectRoom(newRoom._id);
       }
     } catch (err) {
       console.error('Failed to create room:', err);
@@ -111,6 +138,12 @@ const Dashboard: React.FC = () => {
       const data = await getRoomDetails(roomId);
       if (data.success) {
         setSelectedRoom(data.data);
+        // Fetch files for the root folder
+        const filesData = await getRoomFiles(data.data._id);
+        if (filesData.success) {
+          data.data.files = filesData.data;
+          setSelectedRoom({ ...data.data });
+        }
       }
     } catch (err) {
       console.error('Failed to fetch room details:', err);
@@ -121,14 +154,14 @@ const Dashboard: React.FC = () => {
     if (!selectedRoom || !newFileName.trim()) return;
     
     try {
-      const data = await addFileToRoom(selectedRoom.roomId, {
+      const data = await addFileToRoom(selectedRoom._id, {
         name: newFileName.trim(),
         type: modalType
       });
       
       if (data.success) {
         // Refresh selected room to show new file
-        handleSelectRoom(selectedRoom.roomId);
+        handleSelectRoom(selectedRoom._id);
         setNewFileName('');
         setShowNewFileModal(false);
       }
@@ -137,10 +170,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleExportFile = (file: any) => {
-    const extension = selectedRoom?.language === 'python' ? '.py' : '.js';
+  const handleExportFile = (file: FileItem) => {
+    const extension = file.meta?.language === 'python' ? '.py' : 
+                     file.meta?.language === 'javascript' ? '.js' : '.txt';
     const fileName = file.name.includes('.') ? file.name : `${file.name}${extension}`;
-    const blob = new Blob([file.content || ''], { type: 'text/plain' });
+    
+    // Note: In the new system, content needs to be fetched from FileContent.
+    // For now, we'll use a placeholder or handle it if content was somehow populated.
+    const content = (file as any).content || '// File content only available in Workspace';
+    
+    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -171,10 +210,10 @@ const Dashboard: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 px-4 py-2 bg-gray-800/50 rounded-full border border-gray-700">
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
-              {authUser?.name?.charAt(0).toUpperCase() || 'U'}
+              {authUser?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold leading-none">{authUser?.name || 'User'}</span>
+              <span className="text-sm font-semibold leading-none">{authUser?.username || 'User'}</span>
               <span className="text-xs text-gray-500 leading-none mt-1">{authUser?.email}</span>
             </div>
           </div>
@@ -236,23 +275,23 @@ const Dashboard: React.FC = () => {
                 {rooms.map((room) => (
                   <button
                     key={room._id}
-                    onClick={() => handleSelectRoom(room.roomId)}
+                    onClick={() => handleSelectRoom(room._id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                      selectedRoom?.roomId === room.roomId 
+                      selectedRoom?._id === room._id 
                       ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20' 
                       : 'hover:bg-gray-800/50 text-gray-400'
                     }`}
                   >
                     <div className={`p-2 rounded-lg ${
-                      selectedRoom?.roomId === room.roomId ? 'bg-blue-600/20' : 'bg-gray-800 group-hover:bg-gray-700'
+                      selectedRoom?._id === room._id ? 'bg-blue-600/20' : 'bg-gray-800 group-hover:bg-gray-700'
                     }`}>
                       <Hash size={16} />
                     </div>
                     <div className="flex flex-col items-start overflow-hidden">
-                      <span className="text-sm font-semibold truncate w-full">{room.roomId}</span>
-                      <span className="text-[10px] opacity-60 uppercase">{room.language}</span>
+                      <span className="text-sm font-semibold truncate w-full">{room.name}</span>
+                      <span className="text-[10px] opacity-60 uppercase">{room.isPublic ? 'Public' : 'Private'}</span>
                     </div>
-                    <ChevronRight size={14} className={`ml-auto transition-transform ${selectedRoom?.roomId === room.roomId ? 'rotate-90' : ''}`} />
+                    <ChevronRight size={14} className={`ml-auto transition-transform ${selectedRoom?._id === room._id ? 'rotate-90' : ''}`} />
                   </button>
                 ))}
               </div>
@@ -275,16 +314,16 @@ const Dashboard: React.FC = () => {
               <div className="p-6 border-b border-gray-800 bg-gray-900/20 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-white">Room: {selectedRoom.roomId}</h2>
+                    <h2 className="text-2xl font-bold text-white">Room: {selectedRoom.name}</h2>
                     <span className="px-2.5 py-0.5 text-xs font-mono bg-blue-600/10 text-blue-400 rounded-full border border-blue-600/20">
-                      {selectedRoom.language}
+                      {selectedRoom.userRole}
                     </span>
                   </div>
                   <p className="text-sm text-gray-500">Created {new Date(selectedRoom.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => handleOpenWorkspace(selectedRoom.roomId)}
+                    onClick={() => handleOpenWorkspace(selectedRoom._id)}
                     className="flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-200 font-bold px-6 py-2.5 rounded-xl transition-all"
                   >
                     Open Workspace
@@ -389,10 +428,10 @@ const Dashboard: React.FC = () => {
                       <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Owner</p>
                       <div className="flex items-center gap-3 p-3 bg-blue-600/5 rounded-xl border border-blue-600/10">
                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                          {selectedRoom.createdBy?.name?.charAt(0).toUpperCase() || 'O'}
+                          {selectedRoom.ownerId?.username?.charAt(0).toUpperCase() || 'O'}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold">{selectedRoom.createdBy?.name || 'Room Owner'}</span>
+                          <span className="text-sm font-semibold">{selectedRoom.ownerId?.username || 'Room Owner'}</span>
                           <span className="text-[10px] text-blue-400">Creator</span>
                         </div>
                       </div>

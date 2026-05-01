@@ -1,26 +1,19 @@
-const Room = require('../models/Room');
-const crypto = require('crypto');
+const roomService = require('../services/room.service');
+const fileService = require('../services/file.service');
+const Room = require('../models/room.model');
+const RoomMember = require('../models/roomMember.model');
+const File = require('../models/file.model');
 
 // @desc    Create a new collaborative room
 // @route   POST /api/rooms/create
-// @access  Private (requires auth)
+// @access  Private
 const createRoom = async (req, res) => {
     try {
-        const { language } = req.body;
+        const { name, isPublic } = req.body;
+        const ownerId = req.user._id;
 
-        // Generate a random room ID
-        const roomId = crypto.randomBytes(4).toString('hex');
-
-        if (!req.user) {
-            return res.status(401).json({ success: false, error: 'User not authenticated' });
-        }
-
-        const room = await Room.create({
-            roomId,
-            language: language || 'javascript',
-            createdBy: req.user._id,
-            participants: []
-        });
+        const roomName = name || `Room-${Math.random().toString(36).substring(2, 8)}`;
+        const room = await roomService.createRoom(roomName, ownerId, isPublic);
 
         res.status(201).json({
             success: true,
@@ -32,31 +25,40 @@ const createRoom = async (req, res) => {
     }
 };
 
-// @desc    Get room details (includes saved code snapshot)
+// @desc    Get room details
 // @route   GET /api/rooms/:roomId
-// @access  Public
+// @access  Private
 const getRoomDetails = async (req, res) => {
     try {
-        const room = await Room.findOne({ roomId: req.params.roomId })
-            .populate('createdBy', 'name email');
+        const roomId = req.params.roomId;
+        const userId = req.user._id;
 
+        const room = await roomService.getRoomDetails(roomId);
         if (!room) {
             return res.status(404).json({ success: false, error: 'Room not found' });
         }
 
+        // Get members
+        const members = await RoomMember.find({ roomId }).populate('userId', 'username email avatar').lean();
 
-        console.log(room)
+        // Check if user is a member
+        const membership = members.find(m => m.userId._id.toString() === userId.toString());
+        if (!membership && !room.isPublic) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
         res.status(200).json({
             success: true,
             data: {
-                roomId: room.roomId,
-                language: room.language,
-                createdBy: room.createdBy,
-                code: room.code || '',          // plain-text snapshot for the client
-                files: room.files || [],
-                participants: room.participants || [],
-                createdAt: room.createdAt,
-                updatedAt: room.updatedAt
+                ...room,
+                participants: members.map(m => ({
+                    userId: m.userId._id,
+                    username: m.userId.username,
+                    email: m.userId.email,
+                    avatar: m.userId.avatar,
+                    role: m.role
+                })),
+                userRole: membership ? membership.role : 'viewer'
             }
         });
     } catch (error) {
@@ -64,17 +66,22 @@ const getRoomDetails = async (req, res) => {
         res.status(500).json({ success: false, error: 'Server Error' });
     }
 };
+
 // @desc    Get all rooms for the authenticated user
 // @route   GET /api/rooms/user-rooms
 // @access  Private
 const getUserRooms = async (req, res) => {
     try {
-        const rooms = await Room.find({ 
-            $or: [
-                { createdBy: req.user._id },
-                { 'participants.userId': req.user._id }
-            ]
-        }).sort({ updatedAt: -1 });
+        const userId = req.user._id;
+        const memberships = await RoomMember.find({ userId }).populate({
+            path: 'roomId',
+            populate: { path: 'ownerId', select: 'username email' }
+        });
+
+        const rooms = memberships.map(m => ({
+            ...m.roomId.toObject(),
+            userRole: m.role
+        }));
 
         res.status(200).json({
             success: true,
@@ -92,18 +99,27 @@ const getUserRooms = async (req, res) => {
 const createFile = async (req, res) => {
     try {
         const { name, type, parentId } = req.body;
-        const room = await Room.findOne({ roomId: req.params.roomId });
+        const roomId = req.params.roomId;
+        const userId = req.user._id;
 
-        if (!room) {
-            return res.status(404).json({ success: false, error: 'Room not found' });
+        // Check permissions
+        const canEdit = await roomService.checkPermission(roomId, userId, 'edit');
+        if (!canEdit) {
+            return res.status(403).json({ success: false, error: 'Permission denied' });
         }
 
-        room.files.push({ name, type, parentId });
-        await room.save();
+        // If parentId is not provided, use rootFolderId
+        let targetParentId = parentId;
+        if (!targetParentId) {
+            const room = await Room.findById(roomId);
+            targetParentId = room.rootFolderId;
+        }
+
+        const file = await fileService.createFile(name, type, targetParentId, roomId, userId);
 
         res.status(201).json({
             success: true,
-            data: room.files[room.files.length - 1]
+            data: file
         });
     } catch (error) {
         console.error('Create File Error:', error);
@@ -111,20 +127,22 @@ const createFile = async (req, res) => {
     }
 };
 
-// @desc    Get all files for a room
+// @desc    Get all files for a room (hierarchical)
 // @route   GET /api/rooms/:roomId/files
 // @access  Private
 const getRoomFiles = async (req, res) => {
     try {
-        const room = await Room.findOne({ roomId: req.params.roomId });
+        const roomId = req.params.roomId;
+        const { parentId } = req.query;
 
-        if (!room) {
-            return res.status(404).json({ success: false, error: 'Room not found' });
-        }
+        // If parentId is not provided, get root files
+        const folderId = parentId || (await Room.findById(roomId)).rootFolderId;
+
+        const files = await fileService.getFolderContents(folderId, roomId);
 
         res.status(200).json({
             success: true,
-            data: room.files
+            data: files
         });
     } catch (error) {
         console.error('Get Room Files Error:', error);

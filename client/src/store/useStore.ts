@@ -8,6 +8,7 @@ export interface User {
 
 interface EditorState {
   roomId: string | null;
+  fileId: string | null;
   language: string;
   code: string;
   output: string;
@@ -30,6 +31,7 @@ interface EditorState {
 export const useStore = create<EditorState>((set) => ({
   roomId: null,
   language: "javascript",
+  fileId: null,
   code: "",
   output: "",
   isExecuting: false,
@@ -50,5 +52,5 @@ export const useStore = create<EditorState>((set) => ({
     set({ token });
   },
   setAuthUser: (user) =>
-    set({ authUser: user, username: user ? user.name : "" }),
+    set({ authUser: user, username: user ? user.username : "" }),
 }));
