@@ -30,11 +30,26 @@ const createFile = async (name, type, parentId, roomId, userId) => {
 };
 
 const getFolderContents = async (parentId, roomId) => {
-    return await File.find({
-        roomId,
-        parentId,
+    console.log('[FileService] getFolderContents - parentId:', parentId, 'roomId:', roomId);
+    
+    // Ensure we are using ObjectIds for the query
+    const query = {
+        roomId: new mongoose.Types.ObjectId(roomId),
         isDeleted: false
-    }).sort({ type: 1, name: 1 }).lean();
+    };
+
+    if (parentId) {
+        query.parentId = new mongoose.Types.ObjectId(parentId);
+    } else {
+        // If no parentId provided, look for root level files
+        query.parentId = null;
+    }
+    
+    console.log('[FileService] Query:', JSON.stringify(query));
+    
+    const results = await File.find(query).sort({ type: 1, name: 1 }).lean();
+    console.log('[FileService] Found', results.length, 'files');
+    return results;
 };
 
 const moveFile = async (fileId, newParentId) => {

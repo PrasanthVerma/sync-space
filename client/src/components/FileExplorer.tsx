@@ -42,9 +42,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ roomId, onFileSelect, selec
 
         try {
             const data = await addFileToRoom(roomId, { name, type });
+            console.log('FileExplorer: Create file response:', data);
             if (data.success) {
+                console.log('FileExplorer: Refreshing files for roomId:', roomId);
                 await fetchFiles();
                 if (type === 'file') onFileSelect(data.data._id);
+            } else {
+                console.warn('FileExplorer: Create file failed:', data.error);
             }
         } catch (err) {
             console.error('Failed to create file:', err);

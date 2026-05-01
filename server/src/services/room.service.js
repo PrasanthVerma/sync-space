@@ -3,6 +3,7 @@ const RoomMember = require('../models/roomMember.model');
 const File = require('../models/file.model');
 
 const createRoom = async (name, ownerId, isPublic = false) => {
+    console.log('[RoomService] Creating room:', name, 'for owner:', ownerId);
     const room = new Room({
         name,
         ownerId,
@@ -10,6 +11,7 @@ const createRoom = async (name, ownerId, isPublic = false) => {
     });
 
     const savedRoom = await room.save();
+    console.log('[RoomService] Room saved:', savedRoom._id);
 
     // Create owner as a member
     await RoomMember.create({
@@ -22,6 +24,7 @@ const createRoom = async (name, ownerId, isPublic = false) => {
             canInvite: true
         }
     });
+    console.log('[RoomService] Owner added as member');
 
     // Create root folder for the room
     const rootFolder = new File({
@@ -33,12 +36,19 @@ const createRoom = async (name, ownerId, isPublic = false) => {
         createdBy: ownerId
     });
 
+    console.log('[RoomService] Saving root folder...');
     const savedRoot = await rootFolder.save();
+    console.log('[RoomService] Root folder saved:', savedRoot._id);
     
-    savedRoom.rootFolderId = savedRoot._id;
-    await savedRoom.save();
+    // Update room with rootFolderId using findByIdAndUpdate for reliability
+    const finalRoom = await Room.findByIdAndUpdate(
+        savedRoom._id,
+        { rootFolderId: savedRoot._id },
+        { new: true }
+    );
+    console.log('[RoomService] Room updated with rootFolderId');
 
-    return savedRoom;
+    return finalRoom;
 };
 
 const getRoomDetails = async (roomId) => {

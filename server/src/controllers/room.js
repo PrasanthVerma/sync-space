@@ -3,6 +3,7 @@ const fileService = require('../services/file.service');
 const Room = require('../models/room.model');
 const RoomMember = require('../models/roomMember.model');
 const File = require('../models/file.model');
+const mongoose = require('mongoose');
 
 // @desc    Create a new collaborative room
 // @route   POST /api/rooms/create
@@ -33,13 +34,25 @@ const getRoomDetails = async (req, res) => {
         const roomId = req.params.roomId;
         const userId = req.user._id;
 
-        const room = await roomService.getRoomDetails(roomId);
+        // Resolve room (handle ID or Name)
+        let room;
+        if (mongoose.Types.ObjectId.isValid(roomId)) {
+            room = await Room.findById(roomId);
+        }
+        
+        if (!room) {
+            room = await Room.findOne({ $or: [{ name: roomId }, { roomId: roomId }] });
+        }
+
         if (!room) {
             return res.status(404).json({ success: false, error: 'Room not found' });
         }
+        
+        // Ensure roomId used for further queries is the actual ID
+        const actualRoomId = room._id;
 
         // Get members
-        const members = await RoomMember.find({ roomId }).populate('userId', 'username email avatar').lean();
+        const members = await RoomMember.find({ roomId: actualRoomId }).populate('userId', 'username email avatar').lean();
 
         // Check if user is a member
         const membership = members.find(m => m.userId._id.toString() === userId.toString());
@@ -47,19 +60,21 @@ const getRoomDetails = async (req, res) => {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
+        // Ensure we have a consistent room object
+        const roomData = {
+            ...room.toObject(),
+            _id: room._id.toString(),
+            id: room._id.toString(), // Add id as alias for convenience
+            participants: members.map(m => ({
+                ...m.userId,
+                role: m.role
+            })),
+            userRole: membership ? membership.role : 'viewer'
+        };
+
         res.status(200).json({
             success: true,
-            data: {
-                ...room,
-                participants: members.map(m => ({
-                    userId: m.userId._id,
-                    username: m.userId.username,
-                    email: m.userId.email,
-                    avatar: m.userId.avatar,
-                    role: m.role
-                })),
-                userRole: membership ? membership.role : 'viewer'
-            }
+            data: roomData
         });
     } catch (error) {
         console.error('Get Room Details Error:', error);
@@ -78,10 +93,17 @@ const getUserRooms = async (req, res) => {
             populate: { path: 'ownerId', select: 'username email' }
         });
 
-        const rooms = memberships.map(m => ({
-            ...m.roomId.toObject(),
-            userRole: m.role
-        }));
+        const rooms = memberships
+            .filter(m => m.roomId && typeof m.roomId.toObject === 'function')
+            .map(m => {
+                const roomObj = m.roomId.toObject();
+                return {
+                    ...roomObj,
+                    _id: roomObj._id.toString(),
+                    id: roomObj._id.toString(), // Add alias
+                    userRole: m.role
+                };
+            });
 
         res.status(200).json({
             success: true,
@@ -102,8 +124,22 @@ const createFile = async (req, res) => {
         const roomId = req.params.roomId;
         const userId = req.user._id;
 
+        // Resolve room (handle ID, Name, or Legacy roomId)
+        let room;
+        if (mongoose.Types.ObjectId.isValid(roomId)) {
+            room = await Room.findById(roomId);
+        }
+        
+        if (!room) {
+            room = await Room.findOne({ $or: [{ name: roomId }, { roomId: roomId }] });
+        }
+        
+        if (!room) {
+            return res.status(404).json({ success: false, error: 'Room not found' });
+        }
+
         // Check permissions
-        const canEdit = await roomService.checkPermission(roomId, userId, 'edit');
+        const canEdit = await roomService.checkPermission(room._id, userId, 'edit');
         if (!canEdit) {
             return res.status(403).json({ success: false, error: 'Permission denied' });
         }
@@ -111,11 +147,10 @@ const createFile = async (req, res) => {
         // If parentId is not provided, use rootFolderId
         let targetParentId = parentId;
         if (!targetParentId) {
-            const room = await Room.findById(roomId);
             targetParentId = room.rootFolderId;
         }
 
-        const file = await fileService.createFile(name, type, targetParentId, roomId, userId);
+        const file = await fileService.createFile(name, type, targetParentId, room._id, userId);
 
         res.status(201).json({
             success: true,
@@ -136,9 +171,30 @@ const getRoomFiles = async (req, res) => {
         const { parentId } = req.query;
 
         // If parentId is not provided, get root files
-        const folderId = parentId || (await Room.findById(roomId)).rootFolderId;
+        // Resolve room (handle ID or Name)
+        let room;
+        if (mongoose.Types.ObjectId.isValid(roomId)) {
+            room = await Room.findById(roomId);
+        }
+        
+        if (!room) {
+            room = await Room.findOne({ $or: [{ name: roomId }, { roomId: roomId }] });
+        }
 
-        const files = await fileService.getFolderContents(folderId, roomId);
+        if (!room) {
+            return res.status(404).json({ success: false, error: 'Room not found' });
+        }
+
+        const folderId = parentId || room.rootFolderId || null;
+        console.log('[GetRoomFiles] Resolved room:', room._id, 'rootFolderId:', room.rootFolderId);
+        console.log('[GetRoomFiles] Final folderId used:', folderId);
+        
+        if (!folderId) {
+            console.log('[GetRoomFiles] WARNING: No folderId found for room');
+        }
+        
+        const files = await fileService.getFolderContents(folderId, room._id);
+        console.log('[GetRoomFiles] Found files count:', files.length);
 
         res.status(200).json({
             success: true,

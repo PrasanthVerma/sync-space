@@ -158,12 +158,16 @@ const Dashboard: React.FC = () => {
         name: newFileName.trim(),
         type: modalType
       });
+      console.log('Dashboard: Create file response:', data);
       
       if (data.success) {
+        console.log('Dashboard: Refreshing room details for:', selectedRoom._id);
         // Refresh selected room to show new file
         handleSelectRoom(selectedRoom._id);
         setNewFileName('');
         setShowNewFileModal(false);
+      } else {
+        console.warn('Dashboard: Create file failed:', data.error);
       }
     } catch (err) {
       console.error('Failed to create file/folder:', err);
@@ -191,6 +195,10 @@ const Dashboard: React.FC = () => {
   };
 
   const handleOpenWorkspace = (roomId: string) => {
+    if (!roomId || roomId === 'undefined') {
+      console.error('Dashboard: Cannot open workspace, roomId is missing');
+      return;
+    }
     navigate(`/api/rooms/${roomId}`);
   };
 
