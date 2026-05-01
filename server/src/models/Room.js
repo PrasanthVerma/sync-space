@@ -30,7 +30,29 @@ const roomSchema = new mongoose.Schema({
     participants: [
         {
             socketId: String,
-            username: String
+            username: String,
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        }
+    ],
+    files: [
+        {
+            name: String,
+            type: {
+                type: String,
+                enum: ['file', 'folder'],
+                default: 'file'
+            },
+            parentId: {
+                type: String,
+                default: null
+            },
+            content: {
+                type: String,
+                default: ''
+            }
         }
     ]
 }, { timestamps: true });

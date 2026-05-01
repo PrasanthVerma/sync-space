@@ -20,7 +20,7 @@ const Login: React.FC = () => {
       if (data.success) {
         setToken(data.token);
         setAuthUser(data.data);
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
