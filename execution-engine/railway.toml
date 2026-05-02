@@ -8,7 +8,7 @@
 
 [deploy]
   # Run setup.sh first to build sandbox Docker images, then start the server
-  startCommand = "sh setup.sh && node src/index.js"
+  startCommand = "node src/index.js"
 
   # Railway will GET /health every 30s; non-200 = unhealthy → restart
   healthcheckPath    = "/health"
