@@ -10,7 +10,17 @@ const authRoutes = require('./routes/auth');
 dotenv.config();
 
 // Allow requests from any localhost port (Vite uses :5173 by default)
-// and any deployed frontend domain set in CLIENT_ORIGIN env var.
+// and any deployed frontend domains listed in CLIENT_ORIGINS env var (comma-separated).
+const ALLOWED_ORIGINS = [
+    'https://sync-space-ymwm.onrender.com', // Render server (health checks / same-origin)
+    'https://sync-space-liart.vercel.app', // Vercel server (health checks / same-origin)
+    // Railway health checks don't send Origin; they're allowed via the localhost rule.
+    ...(process.env.CLIENT_ORIGINS
+        ? process.env.CLIENT_ORIGINS.split(',').map(o => o.trim())
+        : []
+    )
+];
+
 const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin (curl, Postman, server-to-server)
@@ -19,8 +29,8 @@ const corsOptions = {
         if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
             return callback(null, true);
         }
-        // Allow explicitly configured production frontend
-        if (process.env.CLIENT_ORIGIN && origin === process.env.CLIENT_ORIGIN) {
+        // Allow any explicitly configured production origin
+        if (ALLOWED_ORIGINS.includes(origin)) {
             return callback(null, true);
         }
         callback(new Error(`CORS: origin ${origin} not allowed`));
