@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Code2, 
-  Plus, 
-  FolderPlus, 
-  FilePlus, 
-  LogOut, 
-  User, 
-  Search, 
-  Folder, 
-  FileText, 
-  Download, 
+import {
+  Code2,
+  Plus,
+  FolderPlus,
+  FilePlus,
+  LogOut,
+  User,
+  Search,
+  Folder,
+  FileText,
+  Download,
   ChevronRight,
   Hash,
   Users as UsersIcon,
@@ -20,10 +20,10 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { logout as logoutApi } from '../services/auth';
-import { 
-  getUserRooms, 
-  createRoom, 
-  getRoomDetails, 
+import {
+  getUserRooms,
+  createRoom,
+  getRoomDetails,
   addFileToRoom,
   getRoomFiles
 } from '../services/room';
@@ -66,7 +66,7 @@ interface Room {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { authUser, setToken, setAuthUser } = useStore();
-  
+
   // State
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,14 +152,14 @@ const Dashboard: React.FC = () => {
 
   const handleCreateFile = async () => {
     if (!selectedRoom || !newFileName.trim()) return;
-    
+
     try {
       const data = await addFileToRoom(selectedRoom._id, {
         name: newFileName.trim(),
         type: modalType
       });
       console.log('Dashboard: Create file response:', data);
-      
+
       if (data.success) {
         console.log('Dashboard: Refreshing room details for:', selectedRoom._id);
         // Refresh selected room to show new file
@@ -175,14 +175,14 @@ const Dashboard: React.FC = () => {
   };
 
   const handleExportFile = (file: FileItem) => {
-    const extension = file.meta?.language === 'python' ? '.py' : 
-                     file.meta?.language === 'javascript' ? '.js' : '.txt';
+    const extension = file.meta?.language === 'python' ? '.py' :
+      file.meta?.language === 'javascript' ? '.js' : '.txt';
     const fileName = file.name.includes('.') ? file.name : `${file.name}${extension}`;
-    
+
     // Note: In the new system, content needs to be fetched from FileContent.
     // For now, we'll use a placeholder or handle it if content was somehow populated.
     const content = (file as any).content || '// File content only available in Workspace';
-    
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -225,7 +225,7 @@ const Dashboard: React.FC = () => {
               <span className="text-xs text-gray-500 leading-none mt-1">{authUser?.email}</span>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all duration-200"
             title="Logout"
@@ -240,7 +240,7 @@ const Dashboard: React.FC = () => {
         {/* Left Sidebar */}
         <aside className="w-72 border-r border-gray-800 bg-gray-900/30 flex flex-col">
           <div className="p-4 space-y-4">
-            <button 
+            <button
               onClick={handleCreateRoom}
               disabled={isCreatingRoom}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-900/20"
@@ -250,8 +250,8 @@ const Dashboard: React.FC = () => {
             </button>
 
             <form onSubmit={handleJoinRoom} className="relative group">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Join by Room ID..."
                 value={joinRoomId}
                 onChange={(e) => setJoinRoomId(e.target.value)}
@@ -267,7 +267,7 @@ const Dashboard: React.FC = () => {
               <LayoutDashboard size={14} />
               Your Rooms
             </div>
-            
+
             {isLoading ? (
               <div className="flex flex-col gap-2 px-2 mt-2">
                 {[1, 2, 3].map(i => (
@@ -284,15 +284,13 @@ const Dashboard: React.FC = () => {
                   <button
                     key={room._id}
                     onClick={() => handleSelectRoom(room._id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                      selectedRoom?._id === room._id 
-                      ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20' 
-                      : 'hover:bg-gray-800/50 text-gray-400'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${selectedRoom?._id === room._id
+                        ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
+                        : 'hover:bg-gray-800/50 text-gray-400'
+                      }`}
                   >
-                    <div className={`p-2 rounded-lg ${
-                      selectedRoom?._id === room._id ? 'bg-blue-600/20' : 'bg-gray-800 group-hover:bg-gray-700'
-                    }`}>
+                    <div className={`p-2 rounded-lg ${selectedRoom?._id === room._id ? 'bg-blue-600/20' : 'bg-gray-800 group-hover:bg-gray-700'
+                      }`}>
                       <Hash size={16} />
                     </div>
                     <div className="flex flex-col items-start overflow-hidden">
@@ -306,12 +304,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-gray-800 bg-gray-900/50">
-            <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-500 hover:text-gray-300 transition-colors text-sm">
-              <Settings size={18} />
-              Settings
-            </button>
-          </div>
+
         </aside>
 
         {/* Center Section */}
@@ -330,14 +323,11 @@ const Dashboard: React.FC = () => {
                   <p className="text-sm text-gray-500">Created {new Date(selectedRoom.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => handleOpenWorkspace(selectedRoom._id)}
                     className="flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-200 font-bold px-6 py-2.5 rounded-xl transition-all"
                   >
                     Open Workspace
-                  </button>
-                  <button className="p-2.5 text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-800 rounded-xl border border-gray-700 transition-all">
-                    <MoreVertical size={20} />
                   </button>
                 </div>
               </div>
@@ -352,14 +342,14 @@ const Dashboard: React.FC = () => {
                       Files & Folders
                     </h3>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => { setModalType('file'); setShowNewFileModal(true); }}
                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-all"
                       >
                         <FilePlus size={14} />
                         New File
                       </button>
-                      <button 
+                      <button
                         onClick={() => { setModalType('folder'); setShowNewFileModal(true); }}
                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-all"
                       >
@@ -372,7 +362,7 @@ const Dashboard: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {selectedRoom.files && selectedRoom.files.length > 0 ? (
                       selectedRoom.files.map((file, idx) => (
-                        <div 
+                        <div
                           key={idx}
                           className="p-4 bg-gray-900/40 border border-gray-800 rounded-2xl hover:border-blue-500/50 transition-all group"
                         >
@@ -381,7 +371,7 @@ const Dashboard: React.FC = () => {
                               {file.type === 'folder' ? <Folder size={24} /> : <FileText size={24} />}
                             </div>
                             {file.type === 'file' && (
-                              <button 
+                              <button
                                 onClick={() => handleExportFile(file)}
                                 className="p-2 text-gray-500 hover:text-white bg-gray-800/0 hover:bg-gray-800 rounded-lg transition-all"
                                 title="Export"
@@ -430,7 +420,7 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs text-gray-500">Only you are here currently</p>
                       </div>
                     )}
-                    
+
                     {/* Placeholder for persistent collaborators if any */}
                     <div className="pt-4 mt-4 border-t border-gray-800">
                       <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Owner</p>
@@ -457,7 +447,7 @@ const Dashboard: React.FC = () => {
               <p className="text-gray-500 max-w-md">
                 Select a room from the sidebar to manage files, view collaborators, and start coding together.
               </p>
-              
+
               <div className="grid grid-cols-2 gap-4 mt-12 w-full max-w-lg">
                 <div className="p-6 bg-gray-900/50 border border-gray-800 rounded-2xl text-left hover:border-blue-500/30 transition-all cursor-pointer group" onClick={handleCreateRoom}>
                   <Plus className="text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
@@ -486,9 +476,9 @@ const Dashboard: React.FC = () => {
                 <div className="p-6 space-y-4">
                   <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Name</label>
-                    <input 
+                    <input
                       autoFocus
-                      type="text" 
+                      type="text"
                       placeholder={`Enter ${modalType} name...`}
                       value={newFileName}
                       onChange={(e) => setNewFileName(e.target.value)}
@@ -497,13 +487,13 @@ const Dashboard: React.FC = () => {
                     />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button 
+                    <button
                       onClick={() => setShowNewFileModal(false)}
                       className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl transition-all"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={handleCreateFile}
                       disabled={!newFileName.trim()}
                       className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-900/20"

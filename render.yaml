@@ -1,0 +1,19 @@
+services:
+  # ── Express API + WebSocket server ──────────────────────────────────────────
+  - type: web
+    name: syncspace-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/index.js
+    plan: free                          # change to 'starter' for always-on
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Set these as secrets in the Render dashboard, not here:
+      # - key: MONGO_URI
+      # - key: JWT_SECRET
+      # - key: REDIS_URL
