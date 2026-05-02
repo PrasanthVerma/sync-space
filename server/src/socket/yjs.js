@@ -91,6 +91,10 @@ const setupWebSocket = (server) => {
             wss.handleUpgrade(request, socket, head, (ws) => {
                 wss.emit('connection', ws, request);
             });
+        } else {
+            // Reject unexpected upgrade paths immediately
+            socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+            socket.destroy();
         }
     });
 
