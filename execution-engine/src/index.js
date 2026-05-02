@@ -9,6 +9,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check — used by Railway, Render, and the Dockerfile HEALTHCHECK
+app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', service: 'execution-engine' });
+});
+
 app.post('/execute', async (req, res) => {
     const { code, language } = req.body;
     

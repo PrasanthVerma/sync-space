@@ -1,0 +1,18 @@
+# Railway Deployment Configuration — Execution Engine
+# Docs: https://docs.railway.com/reference/config-as-code
+
+[build]
+  # Use the Dockerfile in this directory (execution-engine/)
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Railway injects $PORT automatically — index.js already reads it
+  startCommand = "node src/index.js"
+
+  # Railway will GET /health every 30s; non-200 = unhealthy → restart
+  healthcheckPath    = "/health"
+  healthcheckTimeout = 30            # seconds to wait for a 200 response
+
+  # Restart policy
+  restartPolicyType       = "ON_FAILURE"
+  restartPolicyMaxRetries = 3
