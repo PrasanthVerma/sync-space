@@ -6,7 +6,6 @@ import {
   FolderPlus,
   FilePlus,
   LogOut,
-  User,
   Search,
   Folder,
   FileText,
@@ -14,9 +13,7 @@ import {
   ChevronRight,
   Hash,
   Users as UsersIcon,
-  LayoutDashboard,
-  Settings,
-  MoreVertical
+  LayoutDashboard
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { logout as logoutApi } from '../services/auth';

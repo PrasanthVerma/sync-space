@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getRoomFiles, addFileToRoom } from '../services/room';
-import { Folder, File, ChevronRight, Plus, FolderPlus, FilePlus } from 'lucide-react';
+import { Folder, File, FolderPlus, FilePlus } from 'lucide-react';
 
 interface FileExplorerProps {
     roomId: string;
@@ -11,7 +11,6 @@ interface FileExplorerProps {
 const FileExplorer: React.FC<FileExplorerProps> = ({ roomId, onFileSelect, selectedFileId }) => {
     const [files, setFiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isCreating, setIsCreating] = useState(false);
 
     useEffect(() => {
         fetchFiles();

@@ -10,7 +10,6 @@ interface EditorWorkspaceProps {
   fileId?: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => {
   const monaco = useMonaco();
@@ -18,7 +17,7 @@ const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => 
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
 
-    const { language, setCode, setUsers, username, setUsername, token } = useStore();
+    const { language, setCode, setUsers, username } = useStore();
 
     useEffect(() => {
         if (!monaco || !editorRef.current || !fileId) return;
