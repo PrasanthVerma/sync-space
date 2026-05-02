@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# Install Docker CLI (needed to spawn sandbox containers at runtime)
-RUN apk add --no-cache docker-cli bash
+# python3 — needed to execute Python code directly via child_process
+RUN apk add --no-cache python3
 
 WORKDIR /app
 
