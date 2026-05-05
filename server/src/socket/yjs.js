@@ -44,7 +44,10 @@ const restoreSnapshot = async (fileId, ydoc) => {
         const updates = await fileService.getFileUpdates(fileId);
         if (updates && updates.length > 0) {
             updates.forEach(u => {
-                Y.applyUpdate(ydoc, new Uint8Array(u.update));
+                // u.update from mongoose lean() is a mongodb.Binary object, which has a .buffer property.
+                // If it's a native Buffer, .buffer also exists and returns the underlying ArrayBuffer.
+                const buffer = u.update.buffer || u.update;
+                Y.applyUpdate(ydoc, new Uint8Array(buffer));
             });
             console.log(`[Restore] File ${fileId} restored from ${updates.length} updates`);
         }

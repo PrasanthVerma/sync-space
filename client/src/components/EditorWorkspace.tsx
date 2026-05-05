@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -13,14 +13,14 @@ interface EditorWorkspaceProps {
 
 const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => {
   const monaco = useMonaco();
-  const editorRef = useRef<any>(null);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
 
     const { language, setCode, setUsers, username } = useStore();
 
     useEffect(() => {
-        if (!monaco || !editorRef.current || !fileId) return;
+        if (!monaco || !editorInstance || !fileId) return;
 
         // Cleanup previous binding and provider
         if (bindingRef.current) bindingRef.current.destroy();
@@ -59,8 +59,8 @@ const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => 
 
         const binding = new MonacoBinding(
             ytext,
-            editorRef.current.getModel(),
-            new Set([editorRef.current]),
+            editorInstance.getModel(),
+            new Set([editorInstance]),
             wsProvider.awareness
         );
         bindingRef.current = binding;
@@ -69,10 +69,10 @@ const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => 
             if (bindingRef.current) bindingRef.current.destroy();
             if (providerRef.current) providerRef.current.destroy();
         };
-    }, [fileId, monaco]);
+    }, [fileId, monaco, editorInstance]);
 
     const handleEditorDidMount = async (editor: any, _monaco: any) => {
-        editorRef.current = editor;
+        setEditorInstance(editor);
         
         editor.onDidChangeModelContent(() => {
             setCode(editor.getValue());
