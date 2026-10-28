@@ -9,7 +9,11 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { setToken, setAuthUser } = useStore();
+  const { token, setToken, setAuthUser } = useStore();
+
+  // Already logged in — go straight to dashboard
+  if (token) return <Navigate to="/dashboard" replace />;
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +41,8 @@ const Login: React.FC = () => {
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div>
             <label className="text-sm text-gray-400 mb-1 block">Email</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -47,16 +51,16 @@ const Login: React.FC = () => {
           </div>
           <div>
             <label className="text-sm text-gray-400 mb-1 block">Password</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-800 text-sm text-gray-200 px-4 py-3 rounded-lg border border-gray-700 outline-none focus:border-blue-500 transition-colors"
             />
           </div>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-500 transition-colors text-white font-semibold py-3 px-4 rounded-lg mt-2 shadow-sm shadow-blue-900/20"
           >
