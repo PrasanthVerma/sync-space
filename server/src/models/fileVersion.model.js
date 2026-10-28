@@ -8,7 +8,7 @@ const fileVersionSchema = new mongoose.Schema({
         index: true
     },
     snapshot: {
-        type: Buffer, // Full Yjs state snapshot
+        type: Buffer,
         required: true
     },
     versionLabel: {

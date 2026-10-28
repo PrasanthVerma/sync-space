@@ -8,7 +8,7 @@ const fileContentSchema = new mongoose.Schema({
         index: true
     },
     update: {
-        type: Buffer, // Yjs binary update
+        type: Buffer,
         required: true
     },
     version: {

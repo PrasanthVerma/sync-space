@@ -9,10 +9,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { token, setToken, setAuthUser } = useStore();
+  const { setToken, setAuthUser } = useStore();
 
-  // Already logged in — go straight to dashboard
-  if (token) return <Navigate to="/dashboard" replace />;
 
 
   const handleLogin = async (e: React.FormEvent) => {

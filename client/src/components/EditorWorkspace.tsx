@@ -81,7 +81,6 @@ const EditorWorkspace: React.FC<EditorWorkspaceProps> = ({ roomId, fileId }) => 
 
   useEffect(() => {
     return () => {
-      // Cleanup bindings and provider on unmount
       if (bindingRef.current) bindingRef.current.destroy();
       if (providerRef.current) providerRef.current.destroy();
     };

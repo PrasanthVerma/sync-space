@@ -3,52 +3,29 @@ const RoomMember = require('../models/roomMember.model');
 const File = require('../models/file.model');
 
 const createRoom = async (name, ownerId, isPublic = false) => {
-    console.log('[RoomService] Creating room:', name, 'for owner:', ownerId);
-    const room = new Room({
-        name,
-        ownerId,
-        isPublic
-    });
+    const room = await new Room({ name, ownerId, isPublic }).save();
 
-    const savedRoom = await room.save();
-    console.log('[RoomService] Room saved:', savedRoom._id);
-
-    // Create owner as a member
     await RoomMember.create({
-        roomId: savedRoom._id,
+        roomId: room._id,
         userId: ownerId,
         role: 'owner',
-        permissions: {
-            canEdit: true,
-            canDelete: true,
-            canInvite: true
-        }
+        permissions: { canEdit: true, canDelete: true, canInvite: true }
     });
-    console.log('[RoomService] Owner added as member');
 
-    // Create root folder for the room
-    const rootFolder = new File({
+    const rootFolder = await new File({
         name: 'root',
         type: 'folder',
-        roomId: savedRoom._id,
+        roomId: room._id,
         path: '/',
         depth: 0,
         createdBy: ownerId
-    });
+    }).save();
 
-    console.log('[RoomService] Saving root folder...');
-    const savedRoot = await rootFolder.save();
-    console.log('[RoomService] Root folder saved:', savedRoot._id);
-    
-    // Update room with rootFolderId using findByIdAndUpdate for reliability
-    const finalRoom = await Room.findByIdAndUpdate(
-        savedRoom._id,
-        { rootFolderId: savedRoot._id },
+    return await Room.findByIdAndUpdate(
+        room._id,
+        { rootFolderId: rootFolder._id },
         { new: true }
     );
-    console.log('[RoomService] Room updated with rootFolderId');
-
-    return finalRoom;
 };
 
 const getRoomDetails = async (roomId) => {
@@ -76,13 +53,8 @@ const checkPermission = async (roomId, userId, action) => {
     if (action === 'edit') return member.permissions.canEdit;
     if (action === 'delete') return member.permissions.canDelete;
     if (action === 'invite') return member.permissions.canInvite;
-    
-    return true; // viewer access
+
+    return true;
 };
 
-module.exports = {
-    createRoom,
-    getRoomDetails,
-    addMember,
-    checkPermission
-};
+module.exports = { createRoom, getRoomDetails, addMember, checkPermission };

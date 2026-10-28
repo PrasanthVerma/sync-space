@@ -25,21 +25,12 @@ const registerUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        const user = await User.create({
-            username,
-            email,
-            passwordHash
-        });
-
+        const user = await User.create({ username, email, passwordHash });
         const token = generateToken(user._id);
 
         res.status(201).json({
             success: true,
-            data: { 
-                _id: user._id, 
-                username: user.username, 
-                email: user.email 
-            },
+            data: { _id: user._id, username: user.username, email: user.email },
             token
         });
     } catch (error) {
@@ -60,10 +51,9 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        // Handle legacy users who might have 'password' instead of 'passwordHash'
         const hash = user.passwordHash || user.password;
         if (!hash) {
-            return res.status(401).json({ success: false, error: 'Account needs migration or password reset' });
+            return res.status(401).json({ success: false, error: 'Account needs password reset' });
         }
 
         const isMatch = await bcrypt.compare(password, hash);
@@ -71,14 +61,13 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        // Auto-migrate legacy users
+        // Migrate legacy users (password → passwordHash, generate missing username)
         let needsSave = false;
         if (!user.passwordHash && user.password) {
             user.passwordHash = user.password;
             user.password = undefined;
             needsSave = true;
         }
-
         if (!user.username) {
             user.username = user.email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
             needsSave = true;
@@ -106,7 +95,6 @@ const logoutUser = async (req, res) => {
             return res.status(400).json({ success: false, error: 'No token provided' });
         }
 
-        // Add to Redis blacklist (if Redis is available)
         if (redisClient.isConnected()) {
             const decoded = jwt.decode(token);
             if (decoded && decoded.exp) {
@@ -131,9 +119,4 @@ const getMe = async (req, res) => {
     }
 };
 
-module.exports = {
-    registerUser,
-    loginUser,
-    logoutUser,
-    getMe
-};
+module.exports = { registerUser, loginUser, logoutUser, getMe };

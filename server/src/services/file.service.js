@@ -15,41 +15,17 @@ const createFile = async (name, type, parentId, roomId, userId) => {
         }
     }
 
-    const file = new File({
-        name,
-        type,
-        parentId,
-        roomId,
-        path,
-        depth,
-        createdBy: userId,
-        updatedBy: userId
-    });
-
-    return await file.save();
+    return await new File({ name, type, parentId, roomId, path, depth, createdBy: userId, updatedBy: userId }).save();
 };
 
 const getFolderContents = async (parentId, roomId) => {
-    console.log('[FileService] getFolderContents - parentId:', parentId, 'roomId:', roomId);
-    
-    // Ensure we are using ObjectIds for the query
     const query = {
         roomId: new mongoose.Types.ObjectId(roomId),
-        isDeleted: false
+        isDeleted: false,
+        parentId: parentId ? new mongoose.Types.ObjectId(parentId) : null
     };
 
-    if (parentId) {
-        query.parentId = new mongoose.Types.ObjectId(parentId);
-    } else {
-        // If no parentId provided, look for root level files
-        query.parentId = null;
-    }
-    
-    console.log('[FileService] Query:', JSON.stringify(query));
-    
-    const results = await File.find(query).sort({ type: 1, name: 1 }).lean();
-    console.log('[FileService] Found', results.length, 'files');
-    return results;
+    return await File.find(query).sort({ type: 1, name: 1 }).lean();
 };
 
 const moveFile = async (fileId, newParentId) => {
@@ -67,11 +43,9 @@ const moveFile = async (fileId, newParentId) => {
         }
     }
 
-    // If it's a folder, we need to update all children paths recursively
     if (file.type === 'folder') {
         const oldPath = file.path;
         const children = await File.find({ roomId: file.roomId, path: new RegExp(`^${oldPath}/`) });
-        
         for (const child of children) {
             child.path = child.path.replace(oldPath, newPath);
             child.depth = child.depth + (newDepth - file.depth);
@@ -90,8 +64,7 @@ const softDeleteFile = async (fileId) => {
     if (!file) throw new Error('File not found');
 
     file.isDeleted = true;
-    
-    // If folder, soft delete all contents
+
     if (file.type === 'folder') {
         await File.updateMany(
             { roomId: file.roomId, path: new RegExp(`^${file.path}/`) },
@@ -124,19 +97,11 @@ const renameFile = async (fileId, newName) => {
     return await file.save();
 };
 
-// CRDT Content methods
 const appendUpdate = async (fileId, binaryUpdate) => {
-    // Get latest version
     const lastUpdate = await FileContent.findOne({ fileId }).sort({ version: -1 });
     const nextVersion = lastUpdate ? lastUpdate.version + 1 : 1;
 
-    const newUpdate = new FileContent({
-        fileId,
-        update: binaryUpdate,
-        version: nextVersion
-    });
-
-    return await newUpdate.save();
+    return await new FileContent({ fileId, update: binaryUpdate, version: nextVersion }).save();
 };
 
 const getFileUpdates = async (fileId) => {
@@ -144,14 +109,7 @@ const getFileUpdates = async (fileId) => {
 };
 
 const createSnapshot = async (fileId, snapshotBinary, versionLabel, userId) => {
-    const snapshot = new FileVersion({
-        fileId,
-        snapshot: snapshotBinary,
-        versionLabel,
-        createdBy: userId
-    });
-
-    return await snapshot.save();
+    return await new FileVersion({ fileId, snapshot: snapshotBinary, versionLabel, createdBy: userId }).save();
 };
 
 module.exports = {

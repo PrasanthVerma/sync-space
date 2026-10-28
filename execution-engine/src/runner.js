@@ -38,7 +38,6 @@ const executeCode = async (language, code) => {
                 env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=128' },
             },
             async (error, stdout, stderr) => {
-                // Always clean up temp files
                 try {
                     await fs.rm(tempDir, { recursive: true, force: true });
                 } catch (err) {
@@ -62,5 +61,3 @@ const executeCode = async (language, code) => {
 };
 
 module.exports = { executeCode };
-
-
